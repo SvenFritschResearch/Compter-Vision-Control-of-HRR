@@ -4,8 +4,6 @@ import time
 import pyzed.sl as sl
 from kinematic_model_Paper3 import *
 from plotting_numeric_Paper3 import *
-import serial
-#ser = serial.Serial('COM4', 9600, timeout=1)
 time.sleep(2)  # Wait for Arduino to initialize
 
 
@@ -173,9 +171,6 @@ def retrieve_target_pose():
             left_array = image_left.get_data()
             right_array = image_right.get_data()
 
-            # Flip the images vertically and horizontally (0: flip vertically, 1: flip horizontally, -1: both)
-            # left_array = cv2.flip(left_array , -1)
-            # right_array = cv2.flip(right_array, -1)
 
             image_left_hsv = cv2.cvtColor(left_array[:,:,:3], cv2.COLOR_BGR2HSV)
             image_right_hsv = cv2.cvtColor(right_array[:,:,:3], cv2.COLOR_BGR2HSV)
@@ -184,12 +179,6 @@ def retrieve_target_pose():
             # Define the range for the color red in HSV
             lower_blue = np.array([110, 120, 120])
             upper_blue = np.array([125, 255, 255])
-
-            # lower_red_1 = np.array([0, 110, 90])
-            # upper_red_1 = np.array([15, 255, 255])
-            
-            # lower_red_2 = np.array([165, 110, 90])
-            # upper_red_2 = np.array([179, 255, 255])
 
             lower_green = np.array([50, 110, 90])
             upper_green = np.array([80, 255, 255])
@@ -243,24 +232,9 @@ def retrieve_target_pose():
             if contours_for_green_left and contours_for_green_right:
                 disparity_green = center_green_left_x - center_green_right_x  
 
-                # Compute depth using each camera's own focal length
-                # Z_left_green = (baseline * focal_length_left_x) / disparity_green
-                # Z_right_green = (baseline * focal_length_right_x) / disparity_green
                 Z_green_raw = (baseline * focal_length_left_x) / disparity_green
-
-                # Compute X, Y using each camera's own optical center and focal length
-                # X_left_green = (center_green_left_x - cx_left) * Z_left_green / focal_length_left_x
-                # Y_left_green = (center_green_left_y - cy_left) * Z_left_green / focal_length_left_y
                 X_green_raw = (center_green_left_x - cx_left) * Z_green_raw / focal_length_left_x
                 Y_green_raw = (center_green_left_y - cy_left) * Z_green_raw / focal_length_left_y
-
-                # X_right_green = (center_green_right_x - cx_right) * Z_right_green / focal_length_right_x
-                # Y_right_green = (center_green_right_y - cy_right) * Z_right_green / focal_length_right_y
-
-                # X_green_raw = (X_left_green + X_right_green) / 2
-                # Y_green_raw = (Y_left_green + Y_right_green) / 2
-                # Z_green_raw = (Z_left_green + Z_right_green) / 2
-
 
                 raw_data_green_list.append([X_green_raw, Y_green_raw, Z_green_raw])
                 X_green, Y_green, Z_green = kf_3D_green.update([X_green_raw, Y_green_raw, Z_green_raw])
@@ -269,46 +243,25 @@ def retrieve_target_pose():
                
 
             if contours_for_blue_left and contours_for_blue_right:
-                # Compute disparity
                 disparity_blue = center_blue_left_x - center_blue_right_x  
 
-                # Compute depth using each camera's own focal length
-                # Z_left_blue = (baseline * focal_length_left_x) / disparity_blue
-                # Z_right_blue = (baseline * focal_length_right_x) / disparity_blue
                 Z_blue_raw = (baseline * focal_length_left_x) / disparity_blue
-
-                # Compute X, Y using each camera's own optical center and focal length
-                # X_left_blue = (center_blue_left_x - cx_left) * Z_left_blue / focal_length_left_x
-                # Y_left_blue = (center_blue_left_y - cy_left) * Z_left_blue / focal_length_left_y
                 X_blue_raw = (center_blue_left_x - cx_left) * Z_blue_raw / focal_length_left_x
                 Y_blue_raw = (center_blue_left_y - cy_left) * Z_blue_raw / focal_length_left_y
-
-                # X_right_blue = (center_blue_right_x - cx_right) * Z_right_blue / focal_length_right_x
-                # Y_right_blue = (center_blue_right_y - cy_right) * Z_right_blue / focal_length_right_y
-
-                # Final 3D position by averaging
-                # X_blue_raw = (X_left_blue + X_right_blue) / 2
-                # Y_blue_raw = (Y_left_blue + Y_right_blue) / 2
-                # Z_blue_raw = (Z_left_blue + Z_right_blue) / 2
 
                 raw_data_blue_list.append([X_blue_raw, Y_blue_raw, Z_blue_raw])
                 X_blue, Y_blue, Z_blue = kf_3D_blue.update([X_blue_raw, Y_blue_raw, Z_blue_raw])                
                 filtered_data_blue_list.append([X_blue, Y_blue, Z_blue])
 
-                # print(it_counter)
-                # if it_counter == 100:
-                #     plot_filter_effect(raw_data_green_list, filtered_data_green_list, raw_data_blue_list, filtered_data_blue_list)
-            
 
-            # Print countdown up to 5 seconds every 1 second
+            # Print countdown in seconds every 1 second before the tracking starts
             if only_do_once and time.time() - start_time <= countdown_seconds:
                 countdown = countdown_seconds - int(time.time() - start_time)
                 print(f"Set default pose with handle in {countdown} seconds")
                 time.sleep(1)
                 
-            # define default position of the handle after 4 seconds have passed
+
             if only_do_once == True and time.time() - start_time > countdown_seconds:
-                
                 only_do_once = False
                 X_green_start = X_green
                 Y_green_start = Y_green
@@ -325,9 +278,7 @@ def retrieve_target_pose():
                 delta_X_blue = X_blue - X_blue_start
                 delta_Y_blue = Y_blue_start - Y_blue
                 delta_Z_blue = Z_blue_start - Z_blue
-                
-                #print(f" difference in x and y, z_green: {int(delta_X_green):>5} {int(delta_Y_green):>5} {int(delta_Z_green):>5}")
-                #print(X_green, Y_green, Z_green)    
+                  
                 Delta_X = (delta_Y_green + delta_Y_blue)/2 # the z coordinate measured by the camera is the x coordinate in the robot CS
                 Delta_Y = (delta_Z_green + delta_Z_blue)/2
                 Delta_Z = (delta_X_green + delta_X_blue)/2
@@ -338,13 +289,9 @@ def retrieve_target_pose():
                 delta_target_pose = [Delta_X, Delta_Y, Delta_Z, Delta_psi_y, Delta_psi_z, distance]
                 delta_target_pose_list.append(delta_target_pose)
 
-                # if len(delta_target_pose_list) == 4:
-                #     delta_target_pose = np.median(delta_target_pose_list, axis=0).tolist() #returns average_values
-                #     delta_target_pose_list.pop(0)
                 
                 Delta_X_filtered, Delta_Y_filtered, Delta_Z_filtered, Delta_psi_y_filtered, Delta_psi_z_filtered, distance_filtered = delta_target_pose
                 
-
                 #print(f"Delta_X_filtered, Delta_Y_filtered, Delta_Z_filtered, Delta_Alpha_filtered, Delta_Beta_filtered, distance_filtered: {int(Delta_X_filtered):>5} {int(Delta_Y_filtered):>5} {int(Delta_Z_filtered):>5} {int(np.rad2deg(Delta_psi_y_filtered)):>5} {int(np.rad2deg(Delta_psi_z_filtered)):>5} {int(distance_filtered):>5} ")
                 x_t = 350+Delta_X_filtered * motion_scaling_factor_position # +x_t
                 y_t = 180+Delta_Y_filtered * motion_scaling_factor_position # +y_t
@@ -377,30 +324,14 @@ def retrieve_target_pose():
                     separator = np.ones((masked_image_right.shape[0], 10, 3), dtype=np.uint8) * 255 #Create a white vertical separator
                     combined_image = np.hstack((masked_image_left, separator, masked_image_right, separator, right_array[:,:,:3]))
                     fig = plot_func_3D_video(fk, fig=fig, combined_image=combined_image, update=True, save_video=True, update_counter=update_counter)
-                    #print_q(q)
-                    #q_converted = convert_q_to_motor_commands(q)
-                    # print(f"stem_len: {q_converted[0]},  alpha: {q_converted[1]},  rob_len: {q_converted[2]},  "
-                    #    f"theta: {q_converted[3]},  l_delta_niti: {q_converted[4]},  rho_prox: {q_converted[5]},  "
-                    #    f"rho_distal (cam): {q_converted[6]}")
 
-                    #if time.time() - start_time > 10:
-                    #    send_converted_q_to_arduino(q_converted)
-
-                    
-                    
-                    #cv2.imshow("ZED", combined_image)
-
-                
-            
                 if cv2.waitKey(1) & 0xFF == 27:  # ESC key
                     plt.close('all')  # Close all matplotlib plots
                     send_converted_q_to_arduino([0,0,0,0,0,0,0]) # Send the command to the arduino to stop the motors
                     cv2.destroyAllWindows()
                     zed.close()
-                    ser.close() # Close the serial connection with arduino
                     exit()
 
     
-
 if __name__ == "__main__":
     retrieve_target_pose()
