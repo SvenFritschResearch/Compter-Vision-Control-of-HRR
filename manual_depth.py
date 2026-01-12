@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import time
 import pyzed.sl as sl
-from kinematic_model_Paper3 import *
-from plotting_numeric_Paper3 import *
+from kinematic_model import *
+from plotting_numeric import *
 time.sleep(2)  # Wait for Arduino to initialize
 
 
@@ -335,3 +335,4 @@ def retrieve_target_pose():
     
 if __name__ == "__main__":
     retrieve_target_pose()
+
